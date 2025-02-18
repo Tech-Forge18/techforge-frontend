@@ -8,10 +8,6 @@ const dummyPayrollData = [
 ]
 
 export function PayrollReport() {
-  const handleDownload = () => {
-    // Here you would typically generate and download the payroll report
-    console.log("Downloading payroll report...")
-  }
 
   return (
     <Card>
@@ -42,7 +38,7 @@ export function PayrollReport() {
           </TableBody>
         </Table>
         <div className="mt-4">
-          <Button onClick={handleDownload}>Download Payroll Summary</Button>
+          <Button>Download Payroll Summary</Button>
         </div>
       </CardContent>
     </Card>
