@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "next-themes"
 import { NotificationCenter } from "@/components/notifications/notification-center"
-import { LanguageSwitcher } from "@/components/language-switcher"
 import { useAuth } from "@/components/auth/auth-context"
 import {
   DropdownMenu,
@@ -65,7 +64,6 @@ export function MainLayout({ children }: MainLayoutProps) {
               className="pl-8 w-full bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
             />
           </div>
-          <LanguageSwitcher />
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {mounted && theme === "light" ? (
               <Moon className="h-5 w-5 text-cool-600" />
