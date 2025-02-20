@@ -146,10 +146,7 @@ export default function TeamsPage() {
       )}
       <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-vibrant-500 hover:bg-vibrant-600 text-white">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Team
-          </Button>
+          
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px] w-full">
           <DialogHeader>
@@ -247,7 +244,7 @@ export default function TeamsPage() {
                 Cancel
               </Button>
               <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white w-full sm:w-auto">
-                Add Team
+                Submit
               </Button>
             </div>
           </form>

@@ -1,6 +1,5 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,83 +16,115 @@ import {
 } from "@/components/ui/dialog"
 import { Briefcase, Calendar, Users, Plus } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
+import axios from 'axios'
 
-const dummyProjects = [
-  {
-    id: 1,
-    name: "E-commerce Platform",
-    client: "ABC Corp",
-    status: "In Progress",
-    deadline: "2024-06-30",
-    teamSize: 5,
-    description: "Developing a full-featured e-commerce platform with inventory management",
-  },
-  {
-    id: 2,
-    name: "Mobile App Development",
-    client: "XYZ Inc",
-    status: "Planning",
-    deadline: "2024-08-15",
-    teamSize: 3,
-    description: "Creating a cross-platform mobile app for task management",
-  },
-  {
-    id: 3,
-    name: "Data Analytics Dashboard",
-    client: "123 Analytics",
-    status: "Completed",
-    deadline: "2024-05-01",
-    teamSize: 4,
-    description: "Building a real-time data analytics dashboard for business insights",
-  },
-  {
-    id: 4,
-    name: "Website Redesign",
-    client: "Design Co",
-    status: "In Progress",
-    deadline: "2024-07-20",
-    teamSize: 2,
-    description: "Redesigning and modernizing the company's main website",
-  },
-]
+// Define Project Type
+interface Project {
+  id: number
+  name: string
+  client: string
+  status: string
+  deadline: string
+  teamsize: number
+  description: string
+}
+
+const API_URL = "http://127.0.0.1:8000/api/projects/"
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState(dummyProjects)
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
-  const [newProject, setNewProject] = useState({
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false)
+  const [newProject, setNewProject] = useState<Project>({
+    id: 0,
     name: "",
     client: "",
-    status: "",
+    status: "Planning",
     deadline: "",
-    teamSize: 0,
+    teamsize: 0,
     description: "",
   })
+  const [editProject, setEditProject] = useState<Project | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
   const [searchTerm, setSearchTerm] = useState("")
 
-  const handleInputChange = (e) => {
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    try {
+      const response = await axios.get(API_URL)
+      setProjects(response.data)
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setNewProject((prev) => ({ ...prev, [name]: value }))
+    setNewProject((prev) => ({
+      ...prev,
+      [name]: name === "teamsize" ? Number(value) : value,
+    }))
   }
 
-  const handleAddProject = (e) => {
+  const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault()
-    setProjects([...projects, { id: projects.length + 1, ...newProject }])
-    setIsAddProjectOpen(false)
-    setNewProject({
-      name: "",
-      client: "",
-      status: "",
-      deadline: "",
-      teamSize: 0,
-      description: "",
-    })
+    try {
+      const response = await axios.post(API_URL, newProject)
+      setProjects([...projects, response.data])
+      setNewProject({
+        id: 0,
+        name: "",
+        client: "",
+        status: "Planning",
+        deadline: "",
+        teamsize: 0,
+        description: "",
+      })
+      setIsAddProjectOpen(false)
+    } catch (error) {
+      console.error("Error adding project:", error)
+    }
   }
 
-  const filteredProjects = projects.filter(
-    (project) =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.status.toLowerCase().includes(searchTerm.toLowerCase()),
+  const handleDeleteProject = async (id: number) => {
+    try {
+      await axios.delete(`${API_URL}${id}/`)
+      setProjects(projects.filter((project) => project.id !== id))
+    } catch (error) {
+      console.error("Error deleting project:", error)
+    }
+  }
+
+  const handleUpdateProject = async (updatedProject: Project) => {
+    try {
+      const response = await axios.put(`${API_URL}${updatedProject.id}/`, updatedProject)
+      setProjects(projects.map((project) => (project.id === updatedProject.id ? response.data : project)))
+      setIsEditProjectOpen(false)
+      setEditProject(null) // Clear editProject state after successful update
+    } catch (error) {
+      console.error("Error updating project:", error)
+    }
+  }
+
+  const handleEditClick = (project: Project) => {
+    setEditProject(project)
+    setIsEditProjectOpen(true)
+  }
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (editProject) {
+      const { name, value } = e.target
+      setEditProject({
+        ...editProject,
+        [name]: name === "teamsize" ? Number(value) : value,
+      })
+    }
+  }
+
+  const filteredProjects = projects.filter((project) =>
+    project.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -116,42 +147,59 @@ export default function ProjectsPage() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddProject} className="space-y-4">
+                {/* Form fields */}
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="mb-4">
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditProjectOpen} onOpenChange={setIsEditProjectOpen}>
+          <DialogContent className="sm:max-w-[425px] w-full">
+            <DialogHeader>
+              <DialogTitle className="text-vibrant-600 dark:text-vibrant-400">Edit Project</DialogTitle>
+              <DialogDescription className="text-cool-600 dark:text-cool-400">
+                Edit the details of your project.
+              </DialogDescription>
+            </DialogHeader>
+            {editProject && (
+              <form onSubmit={() => handleUpdateProject(editProject)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-cool-700 dark:text-cool-300">
-                    Project Name
-                  </Label>
+                  <Label htmlFor="name">Project Name</Label>
                   <Input
                     id="name"
                     name="name"
-                    value={newProject.name}
-                    onChange={handleInputChange}
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    value={editProject.name}
+                    onChange={handleEditInputChange}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="client" className="text-cool-700 dark:text-cool-300">
-                    Client
-                  </Label>
+                  <Label htmlFor="client">Client</Label>
                   <Input
                     id="client"
                     name="client"
-                    value={newProject.client}
-                    onChange={handleInputChange}
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    value={editProject.client}
+                    onChange={handleEditInputChange}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="status" className="text-cool-700 dark:text-cool-300">
-                    Status
-                  </Label>
+                  <Label htmlFor="status">Status</Label>
                   <Select
                     name="status"
-                    value={newProject.status}
-                    onValueChange={(value) => setNewProject({ ...newProject, status: value })}
+                    value={editProject.status}
+                    onValueChange={(value) => setEditProject({ ...editProject, status: value })}
                   >
-                    <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
+                    <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -162,66 +210,50 @@ export default function ProjectsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deadline" className="text-cool-700 dark:text-cool-300">
-                    Deadline
-                  </Label>
+                  <Label htmlFor="deadline">Deadline</Label>
                   <Input
                     id="deadline"
                     name="deadline"
                     type="date"
-                    value={newProject.deadline}
-                    onChange={handleInputChange}
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    value={editProject.deadline}
+                    onChange={handleEditInputChange}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="teamSize" className="text-cool-700 dark:text-cool-300">
-                    Team Size
-                  </Label>
+                  <Label htmlFor="teamsize">Team Size</Label>
                   <Input
-                    id="teamSize"
-                    name="teamSize"
+                    id="teamsize"
+                    name="teamsize"
                     type="number"
-                    value={newProject.teamSize}
-                    onChange={handleInputChange}
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    value={editProject.teamsize}
+                    onChange={handleEditInputChange}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-cool-700 dark:text-cool-300">
-                    Description
-                  </Label>
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     name="description"
-                    value={newProject.description}
-                    onChange={handleInputChange}
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    value={editProject.description}
+                    onChange={handleEditInputChange}
                     required
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row justify-end gap-4 mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsAddProjectOpen(false)}
-                    className="w-full sm:w-auto"
-                  >
+                  <Button type="button" variant="outline" onClick={() => setIsEditProjectOpen(false)} className="w-full sm:w-auto">
                     Cancel
                   </Button>
                   <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white w-full sm:w-auto">
-                    Add Project
+                    Update
                   </Button>
                 </div>
               </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <div className="mb-4">
-          <Input placeholder="Search projects..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
             <Card key={project.id}>
@@ -241,24 +273,26 @@ export default function ProjectsPage() {
                   </div>
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2" />
-                    <span>Team Size: {project.teamSize}</span>
+                    <span>Team Size: {project.teamsize}</span>
                   </div>
                 </div>
               </CardContent>
               <CardFooter>
-                <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      project.status === "Completed"
-                        ? "bg-green-100 text-green-800"
-                        : project.status === "In Progress"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-yellow-100 text-yellow-800"
-                    }`}
+                <div className="w-full flex flex-col sm:flex-row gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleEditClick(project)}
+                    className="w-full sm:w-auto"
                   >
-                    {project.status}
-                  </span>
-                  <Button>View Details</Button>
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDeleteProject(project.id)}
+                    className="w-full sm:w-auto"
+                  >
+                    Delete
+                  </Button>
                 </div>
               </CardFooter>
             </Card>
@@ -268,4 +302,3 @@ export default function ProjectsPage() {
     </MainLayout>
   )
 }
-

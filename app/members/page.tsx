@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
+import axios from "axios"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,31 +20,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react"
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material"
 
-// Dummy data
-const members = [
-  {
-    id: 1,
-    name: "John Doe",
-    role: "Full Stack Developer",
-    department: "Engineering",
-    email: "john@example.com",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    role: "UI Designer",
-    department: "Design",
-    email: "jane@example.com",
-    status: "Active",
-  },
-  // Add more dummy data as needed
-]
+// Define a type for the member object
+interface Member {
+  id: number;
+  name: string;
+  role: string;
+  email: string;
+  department: string;
+  status: string;
+}
+
+// API base URL
+const apiBaseUrl = "http://127.0.0.1:8000/api/members/" // Replace with actual API URL
 
 export default function MembersPage() {
   const { t } = useTranslation()
+  const [members, setMembers] = useState<Member[]>([])
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const [isEditMemberOpen, setIsEditMemberOpen] = useState(false)  // State to manage the edit dialog
   const [searchTerm, setSearchTerm] = useState("")
+  const [newMember, setNewMember] = useState<Member>({
+    id: 0,
+    name: "",
+    email: "",
+    role: "",
+    department: "",
+    status: "active", // Default status
+  })
+
+  const [editMember, setEditMember] = useState<Member | null>(null)  // State to manage the member being edited
+
+  // Fetch members data on component mount
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const response = await axios.get(apiBaseUrl)
+        setMembers(response.data)
+      } catch (error) {
+        console.error("Error fetching members:", error)
+      }
+    }
+    fetchMembers()
+  }, [])
 
   const filteredMembers = members.filter(
     (member) =>
@@ -52,6 +70,57 @@ export default function MembersPage() {
       member.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  // Handle adding a new member
+  const handleAddMember = async (event: React.FormEvent) => {
+    event.preventDefault() // Prevent the default form submission
+    try {
+      const response = await axios.post(apiBaseUrl, newMember, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      setMembers([...members, response.data])
+      setIsAddMemberOpen(false)
+      setNewMember({ id: 0, name: "", email: "", role: "", department: "", status: "active" }) // Reset form
+    } catch (error) {
+      console.error("Error adding member:", error)
+    }
+  }
+
+  // Handle opening the edit form with selected member details
+  const handleEditMember = (member: Member) => {
+    setEditMember(member)
+    setIsEditMemberOpen(true)
+  }
+
+  // Handle updating a member
+  const handleUpdateMember = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!editMember) return // Prevent submission if no member is selected
+    try {
+      const response = await axios.put(`${apiBaseUrl}${editMember.id}/`, editMember, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      setMembers(members.map((member) => (member.id === editMember.id ? response.data : member)))
+      setIsEditMemberOpen(false)
+      setEditMember(null) // Reset edit member state
+    } catch (error) {
+      console.error("Error updating member:", error)
+    }
+  }
+
+  // Handle deleting a member
+  const handleDeleteMember = async (id: number) => {
+    try {
+      await axios.delete(`${apiBaseUrl}${id}/`)
+      setMembers(members.filter((member) => member.id !== id))
+    } catch (error) {
+      console.error("Error deleting member:", error)
+    }
+  }
 
   return (
     <MainLayout>
@@ -72,65 +141,78 @@ export default function MembersPage() {
                   Add a new member to your organization.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name" className="text-cool-700 dark:text-cool-300">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter full name"
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                  />
+              <form onSubmit={handleAddMember}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name" className="text-cool-700 dark:text-cool-300">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="name"
+                      placeholder="Enter full name"
+                      value={newMember.name}
+                      onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email" className="text-cool-700 dark:text-cool-300">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter email"
+                      value={newMember.email}
+                      onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role" className="text-cool-700 dark:text-cool-300">
+                      Role
+                    </Label>
+                    <Input
+                      id="role"
+                      placeholder="Enter role"
+                      value={newMember.role}
+                      onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="department" className="text-cool-700 dark:text-cool-300">
+                      Department
+                    </Label>
+                    <Select
+                      value={newMember.department}
+                      onValueChange={(value) => setNewMember({ ...newMember, department: value })}
+                    >
+                      <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="engineering">Engineering</SelectItem>
+                        <SelectItem value="design">Design</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="sales">Sales</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-cool-700 dark:text-cool-300">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter email"
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                  />
+                <div className="flex justify-end gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddMemberOpen(false)}
+                    className="border-cool-200 dark:border-cool-600 text-cool-700 dark:text-cool-300"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white">
+                    Submit
+                  </Button>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="role" className="text-cool-700 dark:text-cool-300">
-                    Role
-                  </Label>
-                  <Input
-                    id="role"
-                    placeholder="Enter role"
-                    className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="department" className="text-cool-700 dark:text-cool-300">
-                    Department
-                  </Label>
-                  <Select>
-                    <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="engineering">Engineering</SelectItem>
-                      <SelectItem value="design">Design</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="sales">Sales</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsAddMemberOpen(false)}
-                  className="border-cool-200 dark:border-cool-600 text-cool-700 dark:text-cool-300"
-                >
-                  Cancel
-                </Button>
-                <Button className="bg-vibrant-500 hover:bg-vibrant-600 text-white">Add Member</Button>
-              </div>
+              </form>
             </DialogContent>
           </Dialog>
         </div>
@@ -153,16 +235,16 @@ export default function MembersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TableContainer component={Paper} className="bg-white dark:bg-cool-800">
-              <Table aria-label="members table" stickyHeader>
+            <TableContainer component={Paper}>
+              <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Name</TableCell>
-                    <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Role</TableCell>
-                    <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Department</TableCell>
-                    <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Email</TableCell>
-                    <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Status</TableCell>
-                    <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Actions</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Department</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -172,35 +254,22 @@ export default function MembersPage() {
                       <TableCell className="text-cool-800 dark:text-cool-200">{member.role}</TableCell>
                       <TableCell className="text-cool-800 dark:text-cool-200">{member.department}</TableCell>
                       <TableCell className="text-cool-800 dark:text-cool-200">{member.email}</TableCell>
+                      <TableCell className="text-cool-800 dark:text-cool-200">{member.status}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100">
-                          {member.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-cool-600 hover:text-cool-800 dark:text-cool-400 dark:hover:text-cool-200"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-cool-600 hover:text-cool-800 dark:text-cool-400 dark:hover:text-cool-200"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-cool-600 hover:text-cool-800 dark:text-cool-400 dark:hover:text-cool-200"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="link"
+                          onClick={() => handleEditMember(member)}  // Open edit dialog
+                          className="text-cool-600 dark:text-cool-300"
+                        >
+                          <Pencil className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="link"
+                          onClick={() => handleDeleteMember(member.id)}  // Delete member
+                          className="text-cool-600 dark:text-cool-300"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -210,7 +279,84 @@ export default function MembersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditMemberOpen} onOpenChange={setIsEditMemberOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Member</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateMember}>
+            {editMember && (
+              <>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      value={editMember.name}
+                      onChange={(e) =>
+                        setEditMember({ ...editMember, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      value={editMember.email}
+                      onChange={(e) =>
+                        setEditMember({ ...editMember, email: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Role</Label>
+                    <Input
+                      id="role"
+                      value={editMember.role}
+                      onChange={(e) =>
+                        setEditMember({ ...editMember, role: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Select
+                      value={editMember.department}
+                      onValueChange={(value) =>
+                        setEditMember({ ...editMember, department: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="engineering">Engineering</SelectItem>
+                        <SelectItem value="design">Design</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="sales">Sales</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditMemberOpen(false)}
+                    className="border-cool-200 dark:border-cool-600 text-cool-700 dark:text-cool-300"
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white">
+                    Save Changes
+                  </Button>
+                </div>
+              </>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   )
 }
-
