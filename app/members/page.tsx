@@ -199,6 +199,23 @@ export default function MembersPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="department" className="text-cool-700 dark:text-cool-300">
+                      Status
+                    </Label>
+                    <Select
+                      value={newMember.status}
+                      onValueChange={(value) => setNewMember({ ...newMember, status: value })}
+                    >
+                      <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-4">
                   <Button

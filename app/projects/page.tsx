@@ -147,7 +147,100 @@ export default function ProjectsPage() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddProject} className="space-y-4">
-                {/* Form fields */}
+                 <div className="space-y-2">
+                                    <Label htmlFor="name" className="text-cool-700 dark:text-cool-300">
+                                       Name
+                                    </Label>
+                                    <Input
+                                      id="name"
+                                      name="name"
+                                      value={newProject.name}
+                                      onChange={handleInputChange}
+                                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="client" className="text-cool-700 dark:text-cool-300">
+                                      Client
+                                    </Label>
+                                    <Input
+                                      id="client"
+                                      name="client"
+                                      value={newProject.client}
+                                      onChange={handleInputChange}
+                                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="status" className="text-cool-700 dark:text-cool-300">
+                                      Status
+                                    </Label>
+                                    <Input
+                                      id="status"
+                                      name="status"
+                                      value={newProject.status}
+                                      onChange={handleInputChange}
+                                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                                      required
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor="teamsize" className="text-cool-700 dark:text-cool-300">
+                                      Team Size
+                                    </Label>
+                                    <Input
+                                      id="teamsize"
+                                      name="teamsize"
+                                      type="number"
+                                      value={newProject.teamsize}
+                                      onChange={handleInputChange}
+                                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                                <Label htmlFor="deadline" className="text-cool-700 dark:text-cool-300">
+                                                  Due Date
+                                                </Label>
+                                                <Input
+                                                  id="deadline"
+                                                  name="deadline"
+                                                  type="date"
+                                                  value={newProject.deadline}
+                                                  onChange={handleInputChange}
+                                                  className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                                                  required
+                                                />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="description" className="text-cool-700 dark:text-cool-300">
+                                      Description
+                                    </Label>
+                                    <Textarea
+                                      id="description"
+                                      name="description"
+                                      value={newProject.description}
+                                      onChange={handleInputChange}
+                                      className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="flex flex-col sm:flex-row justify-end gap-4 mt-4">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => setIsAddProjectOpen(false)}
+                                      className="w-full sm:w-auto"
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white w-full sm:w-auto">
+                                      Submit
+                                    </Button>
+                                  </div>
               </form>
             </DialogContent>
           </Dialog>
