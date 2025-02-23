@@ -1,256 +1,368 @@
-"use client"
+"use client";
+import { useState, useEffect } from "react";
+import axios, { AxiosError } from "axios";
+import { PageLayout } from "@/components/layout/page-layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Eye, Edit, Trash } from "lucide-react";
+import { TeamDetail } from "@/components/team-detail";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
 
-import type React from "react"
+// Define interfaces
+interface Team {
+  id: number;
+  name: string;
+  leader: string;
+  teammembers: string[]; // Array of member names (strings)
+  project: string[]; // Array of project names (strings)
+}
 
-import { useState } from "react"
-import { PageLayout } from "@/components/layout/page-layout"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Pencil, Trash2, Eye, Plus } from "lucide-react"
-import { TeamDetail } from "@/components/team-detail"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material"
+interface Project {
+  id: number;
+  name: string;
+}
 
-// Dummy data
-const teams = [
-  {
-    id: 1,
-    name: "Frontend Development",
-    leader: "John Doe",
-    members: ["John Doe", "Jane Smith", "Alice Johnson"],
-    projects: ["E-commerce Platform", "Company Website Redesign"],
-  },
-  {
-    id: 2,
-    name: "Backend Development",
-    leader: "Bob Wilson",
-    members: ["Bob Wilson", "Charlie Brown", "David Lee"],
-    projects: ["API Development", "Database Optimization"],
-  },
-  // Add more dummy data as needed
-]
-
-const allMembers = [
-  "John Doe",
-  "Jane Smith",
-  "Alice Johnson",
-  "Bob Wilson",
-  "Charlie Brown",
-  "David Lee",
-  // Add more members as needed
-]
+interface Member {
+  id: number;
+  name: string;
+}
 
 export default function TeamsPage() {
-  const [isAddTeamOpen, setIsAddTeamOpen] = useState(false)
-  const [selectedTeam, setSelectedTeam] = useState<any>(null)
+  const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [newTeam, setNewTeam] = useState({
+    id: Date.now(),
     name: "",
     leader: "",
-    members: [],
-  })
-  const [searchTerm, setSearchTerm] = useState("")
+    members: [] as string[], // Array of member names (strings)
+    project: [] as string[], // Array of project names (strings)
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [allMembers, setAllMembers] = useState<Member[]>([]); // Array of member objects
+  const [allProjects, setAllProjects] = useState<Project[]>([]); // Array of project objects
 
+  // Fetch teams, members, and projects from the backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const teamsResponse = await axios.get<Team[]>("http://127.0.0.1:8000/api/teams/");
+        setTeams(teamsResponse.data);
+
+        const membersResponse = await axios.get<Member[]>("http://127.0.0.1:8000/api/members/");
+        setAllMembers(membersResponse.data);
+
+        const projectsResponse = await axios.get<Project[]>("http://127.0.0.1:8000/api/projects/");
+        setAllProjects(projectsResponse.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setNewTeam((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setNewTeam((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Here you would typically send the new team to your backend
-    console.log("New team:", newTeam)
-    setIsAddTeamOpen(false)
-    setNewTeam({
-      name: "",
-      leader: "",
-      members: [],
-    })
-  }
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
+    // Debug: Log the newTeam state before sending
+    console.log("Data being sent to the backend:", newTeam);
+
+    try {
+      // Map names to IDs
+      const teammember_ids = newTeam.members.map((memberName) =>
+        allMembers.find((member) => member.name === memberName)?.id
+      );
+      const project_id = allProjects.find((project) => project.name === newTeam.project[0])?.id;
+
+      // Prepare the payload
+      const payload = {
+        name: newTeam.name,
+        leader: newTeam.leader, // Send leader name
+        teammember_ids, // Send member IDs
+        project_id, // Send project ID
+      };
+
+      // Debug: Log the payload
+      console.log("Payload being sent to the backend:", payload);
+
+      // Send the POST request
+      const response = await axios.post<Team>("http://127.0.0.1:8000/api/teams/", payload);
+
+      // Debug: Log the response from the backend
+      console.log("Response from the backend:", response.data);
+
+      // Update the teams state with the new team
+      setTeams([...teams, response.data]);
+
+      // Close the form and reset the newTeam state
+      setIsAddTeamOpen(false);
+      setNewTeam({
+        id: Date.now(),
+        name: "",
+        leader: "",
+        members: [],
+        project: [],
+      });
+
+      alert("Team created successfully!");
+    } catch (error) {
+      console.error("Error creating team:", error);
+
+      // Type guard to check if the error is an AxiosError
+      if (axios.isAxiosError(error)) {
+        console.error("Backend error response:", error.response?.data);
+        alert(`Failed to create team: ${JSON.stringify(error.response?.data)}`);
+      } else {
+        console.error("An unexpected error occurred:", error);
+        alert("Failed to create team. Please check the data and try again.");
+      }
+    }
+  };
+
+  // Filter teams based on search term
   const filteredTeams = teams.filter(
     (team) =>
       team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      team.leader.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      team.leader.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Handle team update
+  const handleUpdateTeam = (updatedTeam: Team) => {
+    setTeams(teams.map((team) => (team.id === updatedTeam.id ? updatedTeam : team)));
+    setSelectedTeam(null);
+  };
+
+  // Handle team deletion
+  const handleDeleteTeam = async (teamId: number) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/teams/${teamId}/`);
+      setTeams(teams.filter((team) => team.id !== teamId));
+      alert("Team deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      alert("Failed to delete team. Please try again.");
+    }
+  };
 
   return (
-    <PageLayout title="Teams" addButtonLabel="Add Team" isOpen={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
-      <div className="mb-4">
-        <Input placeholder="Search teams..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>All Teams</CardTitle>
-          <CardDescription>Manage your organization's teams here.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TableContainer component={Paper} className="bg-white dark:bg-cool-800">
-            <Table aria-label="teams table" stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Team Name</TableCell>
-                  <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Team Leader</TableCell>
-                  <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Members</TableCell>
-                  <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Projects</TableCell>
-                  <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredTeams.map((team) => (
-                  <TableRow key={team.id}>
-                    <TableCell className="text-cool-800 dark:text-cool-200">{team.name}</TableCell>
-                    <TableCell className="text-cool-800 dark:text-cool-200">{team.leader}</TableCell>
-                    <TableCell className="text-cool-800 dark:text-cool-200">{team.members.length}</TableCell>
-                    <TableCell className="text-cool-800 dark:text-cool-200">{team.projects.length}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedTeam(team)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-      {selectedTeam && (
-        <TeamDetail
-          team={selectedTeam}
-          onClose={() => setSelectedTeam(null)}
-          onUpdate={(updatedTeam) => {
-            // Here you would typically update the team in your backend
-            console.log("Updated team:", updatedTeam)
-            setSelectedTeam(null)
-          }}
-          allMembers={allMembers}
-        />
-      )}
-      <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
-        <DialogTrigger asChild>
-          
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px] w-full">
-          <DialogHeader>
-            <DialogTitle className="text-vibrant-600 dark:text-vibrant-400">Add New Team</DialogTitle>
-            <DialogDescription className="text-cool-600 dark:text-cool-400">
-              Create a new team for your organization.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-cool-700 dark:text-cool-300">
-                Team Name
-              </Label>
-              <Input
-                id="name"
-                name="name"
-                value={newTeam.name}
-                onChange={handleInputChange}
-                className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="leader" className="text-cool-700 dark:text-cool-300">
-                Team Leader
-              </Label>
-              <Select
-                name="leader"
-                value={newTeam.leader}
-                onValueChange={(value) => setNewTeam({ ...newTeam, leader: value })}
-              >
-                <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
-                  <SelectValue placeholder="Select team leader" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allMembers.map((member) => (
-                    <SelectItem key={member} value={member}>
-                      {member}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-cool-700 dark:text-cool-300">Team Members</Label>
-              <Select
-                name="members"
-                value={newTeam.members}
-                onValueChange={(value) => setNewTeam({ ...newTeam, members: [...newTeam.members, value] })}
-              >
-                <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
-                  <SelectValue placeholder="Select team members" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allMembers
-                    .filter((member) => !newTeam.members.includes(member))
-                    .map((member) => (
-                      <SelectItem key={member} value={member}>
-                        {member}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <div className="mt-2">
-                {newTeam.members.map((member) => (
-                  <span
-                    key={member}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2 mb-2"
-                  >
-                    {member}
-                    <button
-                      type="button"
-                      className="ml-1 inline-flex items-center p-0.5 rounded-full text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      onClick={() => setNewTeam({ ...newTeam, members: newTeam.members.filter((m) => m !== member) })}
-                    >
-                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row justify-end gap-4 mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsAddTeamOpen(false)}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white w-full sm:w-auto">
-                Submit
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </PageLayout>
-  )
-}
+    <PageLayout
+      title="All Teams"
+      addButtonLabel="Add New Team"
+      isOpen={isAddTeamOpen}
+      onOpenChange={setIsAddTeamOpen}
+      addForm={
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Create a new team</CardTitle>
+              <CardDescription>Fill in the details to create a new team.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                {/* Team Name */}
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Team Name</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    value={newTeam.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter team name"
+                  />
+                </div>
 
+                {/* Team Leader */}
+                <div className="grid gap-2">
+                  <Label htmlFor="leader">Team Leader</Label>
+                  <Input
+                    id="leader"
+                    name="leader"
+                    value={newTeam.leader}
+                    onChange={handleInputChange}
+                    placeholder="Enter team leader name"
+                  />
+                </div>
+
+                {/* Team Members */}
+                <div className="grid gap-2">
+                  <Label htmlFor="members">Team Members</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewTeam({ ...newTeam, members: [...newTeam.members, value] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team members" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allMembers
+                        .filter((member) => !newTeam.members.includes(member.name))
+                        .map((member) => (
+                          <SelectItem key={member.id} value={member.name}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2">
+                    {newTeam.members.map((member) => (
+                      <Button
+                        key={member}
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setNewTeam({
+                            ...newTeam,
+                            members: newTeam.members.filter((m) => m !== member),
+                          })
+                        }
+                      >
+                        {member} <span className="ml-2">×</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Projects */}
+                <div className="grid gap-2">
+                  <Label htmlFor="projects">Projects</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setNewTeam({ ...newTeam, project: [...newTeam.project, value] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select projects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allProjects
+                        .filter((project) => !newTeam.project.includes(project.name))
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.name}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-2">
+                    {newTeam.project.map((project) => (
+                      <Button
+                        key={project}
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setNewTeam({
+                            ...newTeam,
+                            project: newTeam.project.filter((p) => p !== project),
+                          })
+                        }
+                      >
+                        {project} <span className="ml-2">×</span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button type="button" variant="secondary" onClick={() => setIsAddTeamOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Submit</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </form>
+      }
+    >
+      {/* Search Bar */}
+      <div className="mb-4">
+        <Input
+          placeholder="Search teams..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {/* Teams Table */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Team Name</TableCell>
+              <TableCell>Team Leader</TableCell>
+              <TableCell>Members</TableCell>
+              <TableCell>Projects</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredTeams.map((team) => (
+              <TableRow key={team.id}>
+                <TableCell>{team.name}</TableCell>
+                <TableCell>{team.leader}</TableCell>
+                <TableCell>
+                  {team.teammembers}
+               </TableCell>
+              <TableCell>
+                {team.project}
+                </TableCell>
+
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTeam(team)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTeam(team)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteTeam(team.id)}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Team Details Dialog */}
+      {selectedTeam && (
+        <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Team Details</DialogTitle>
+            </DialogHeader>
+            <TeamDetail
+              team={selectedTeam}
+              onUpdate={handleUpdateTeam}
+              onClose={() => setSelectedTeam(null)}
+              allMembers={allMembers.map((member) => member.name)} // Pass only member names
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </PageLayout>
+  );
+}

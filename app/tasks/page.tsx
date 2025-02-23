@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { PageLayout } from "@/components/layout/page-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -23,50 +22,21 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material"
 
-// Dummy data
-const tasks = [
-  {
-    id: 1,
-    title: "Implement user authentication",
-    description: "Set up JWT-based authentication for the new API",
-    assignedTo: "John Doe",
-    dueDate: "2024-03-15",
-    priority: "High",
-    status: "In Progress",
-    progress: 60,
-    comments: [
-      { id: 1, user: "Jane Smith", text: "I've started on the backend part", timestamp: "2024-03-10T10:30:00Z" },
-      { id: 2, user: "John Doe", text: "Frontend integration is next", timestamp: "2024-03-11T14:45:00Z" },
-    ],
-  },
-  {
-    id: 2,
-    title: "Design landing page",
-    description: "Create a responsive design for the new product landing page",
-    assignedTo: "Jane Smith",
-    dueDate: "2024-03-20",
-    priority: "Medium",
-    status: "Pending",
-    progress: 0,
-    comments: [],
-  },
-  // Add more dummy data as needed
-]
+interface Task {
+  id: number
+  title: string
+  description: string
+  duedate: string
+  status: string
+  assignedto: string
+  priority: string
+  comment: string
+  progress: number
+}
 
-const teamMembers = [
-  { id: 1, name: "John Doe" },
-  { id: 2, name: "Jane Smith" },
-  { id: 3, name: "Alice Johnson" },
-  // Add more team members
-]
-
-const TaskDetail = ({
-  task,
-  onClose,
-  onUpdate,
-}: { task: (typeof tasks)[0]; onClose: () => void; onUpdate: (updatedTask: (typeof tasks)[0]) => void }) => {
-  //Implementation for TaskDetail component
-  return <div>Task Detail: {task.title}</div>
+interface TeamMember {
+  id: number
+  name: string
 }
 
 export default function TasksPage() {
@@ -79,31 +49,215 @@ export default function TasksPage() {
     priority: "",
     status: "Pending",
   })
-  const [selectedTask, setSelectedTask] = useState(null)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const { hasPermission } = useAuth()
+
+  // Fetch tasks and team members from the backend
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/tasks/")
+        if (!response.ok) {
+          throw new Error("Failed to fetch tasks")
+        }
+        const data = await response.json()
+        setTasks(data)
+      } catch (error) {
+        console.error("Error fetching tasks:", error)
+      }
+    }
+
+    const fetchTeamMembers = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/teams/") // Replace with your actual API endpoint
+        if (!response.ok) {
+          throw new Error("Failed to fetch team members")
+        }
+        const data = await response.json()
+        setTeamMembers(data)
+      } catch (error) {
+        console.error("Error fetching team members:", error)
+      }
+    }
+
+    fetchTasks()
+    fetchTeamMembers()
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setNewTask((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the new task to your backend
-    console.log("New task:", newTask)
-    setIsAddTaskOpen(false)
-    setNewTask({
-      title: "",
-      description: "",
-      assignedTo: "",
-      dueDate: "",
-      priority: "",
-      status: "Pending",
-    })
+
+    // Prepare the task data to match the Django model
+    const taskData = {
+      title: newTask.title,
+      description: newTask.description,
+      duedate: newTask.dueDate,
+      status: newTask.status,
+      assignedto: newTask.assignedTo, // Ensure this matches the ID of the assigned member
+      priority: newTask.priority,
+      comment: "No comment", // Default comment as per the model
+    }
+
+    try {
+      // Send a POST request to the Django API
+      const response = await fetch("http://127.0.0.1:8000/api/tasks/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(taskData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create task")
+      }
+
+      // Handle successful response
+      const result = await response.json()
+      console.log("Task created successfully:", result)
+
+      // Reset the form and close the dialog
+      setIsAddTaskOpen(false)
+      setNewTask({
+        title: "",
+        description: "",
+        assignedTo: "",
+        dueDate: "",
+        priority: "",
+        status: "Pending",
+      })
+
+      // Refresh the task list
+      const fetchResponse = await fetch("http://127.0.0.1:8000/api/tasks/")
+      if (fetchResponse.ok) {
+        const updatedTasks = await fetchResponse.json()
+        setTasks(updatedTasks)
+      }
+    } catch (error) {
+      console.error("Error creating task:", error)
+    }
   }
 
+  const addForm = (
+    <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-vibrant-600 dark:text-vibrant-400">Add New Task</DialogTitle>
+          <DialogDescription className="text-cool-600 dark:text-cool-400">
+            Create a new task for your team.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-cool-700 dark:text-cool-300">
+              Task Title
+            </Label>
+            <Input
+              id="title"
+              name="title"
+              placeholder="Enter task title"
+              value={newTask.title}
+              onChange={handleInputChange}
+              className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-cool-700 dark:text-cool-300">
+              Description
+            </Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="Enter task description"
+              value={newTask.description}
+              onChange={handleInputChange}
+              className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignedTo" className="text-cool-700 dark:text-cool-300">
+              Assigned To
+            </Label>
+            <Select
+              name="assignedTo"
+              value={newTask.assignedTo}
+              onValueChange={(value) => setNewTask({ ...newTask, assignedTo: value })}
+            >
+              <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
+                <SelectValue placeholder="Select team member" />
+              </SelectTrigger>
+              <SelectContent>
+                {teamMembers.map((member) => (
+                  <SelectItem key={member.id} value={member.id.toString()}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="dueDate" className="text-cool-700 dark:text-cool-300">
+              Due Date
+            </Label>
+            <Input
+              id="dueDate"
+              name="dueDate"
+              type="date"
+              value={newTask.dueDate}
+              onChange={handleInputChange}
+              className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="priority" className="text-cool-700 dark:text-cool-300">
+              Priority
+            </Label>
+            <Select
+              name="priority"
+              value={newTask.priority}
+              onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+            >
+              <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Low">Low</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-4 mt-4">
+            <Button type="button" variant="outline" onClick={() => setIsAddTaskOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white">
+              Add Task
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+
   return (
-    <PageLayout title="Tasks" addButtonLabel="Add Task" isOpen={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
+    <PageLayout
+      title="Tasks"
+      addButtonLabel="Add Task"
+      isOpen={isAddTaskOpen}
+      onOpenChange={setIsAddTaskOpen}
+      addForm={addForm}
+    >
       <Card>
         <CardHeader>
           <CardTitle>All Tasks</CardTitle>
@@ -127,8 +281,10 @@ export default function TasksPage() {
                 {tasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell className="text-cool-800 dark:text-cool-200">{task.title}</TableCell>
-                    <TableCell className="text-cool-800 dark:text-cool-200">{task.assignedTo}</TableCell>
-                    <TableCell className="text-cool-800 dark:text-cool-200">{task.dueDate}</TableCell>
+                    <TableCell className="text-cool-800 dark:text-cool-200">
+                      {teamMembers.find((member) => member.id === parseInt(task.assignedto))?.name || "Unassigned"}
+                    </TableCell>
+                    <TableCell className="text-cool-800 dark:text-cool-200">{task.duedate}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -185,115 +341,6 @@ export default function TasksPage() {
           </TableContainer>
         </CardContent>
       </Card>
-      <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-        <DialogTrigger asChild>
-          <Button className="bg-vibrant-500 hover:bg-vibrant-600 text-white">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Task
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-vibrant-600 dark:text-vibrant-400">Add New Task</DialogTitle>
-            <DialogDescription className="text-cool-600 dark:text-cool-400">
-              Create a new task for your team.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-cool-700 dark:text-cool-300">
-                Task Title
-              </Label>
-              <Input
-                id="title"
-                name="title"
-                placeholder="Enter task title"
-                value={newTask.title}
-                onChange={handleInputChange}
-                className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-cool-700 dark:text-cool-300">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="Enter task description"
-                value={newTask.description}
-                onChange={handleInputChange}
-                className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="assignedTo" className="text-cool-700 dark:text-cool-300">
-                Assigned To
-              </Label>
-              <Select
-                name="assignedTo"
-                value={newTask.assignedTo}
-                onValueChange={(value) => setNewTask({ ...newTask, assignedTo: value })}
-              >
-                <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
-                  <SelectValue placeholder="Select team member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.name}>
-                      {member.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dueDate" className="text-cool-700 dark:text-cool-300">
-                Due Date
-              </Label>
-              <Input
-                id="dueDate"
-                name="dueDate"
-                type="date"
-                value={newTask.dueDate}
-                onChange={handleInputChange}
-                className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="priority" className="text-cool-700 dark:text-cool-300">
-                Priority
-              </Label>
-              <Select
-                name="priority"
-                value={newTask.priority}
-                onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
-              >
-                <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-4 mt-4">
-              <Button type="button" variant="outline" onClick={() => setIsAddTaskOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-vibrant-500 hover:bg-vibrant-600 text-white">
-                Add Task
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </PageLayout>
   )
 }
-

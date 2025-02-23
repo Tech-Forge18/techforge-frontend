@@ -26,7 +26,7 @@ interface Course {
   instructor: string
   duration: string
   level: string
-  enrolledStudents: number
+  enrolledstudents: number
   description: string
 }
 const apiBaseUrl = "http://127.0.0.1:8000/api/courses/"
@@ -41,7 +41,7 @@ export default function CoursesPage() {
     instructor: "",
     duration: "",
     level: "",
-    enrolledStudents: 0,
+    enrolledstudents: 0,
     description: "",
   })
   const [editCourse, setEditCourse] = useState<Course | null>(null)
@@ -79,7 +79,7 @@ export default function CoursesPage() {
         instructor: "",
         duration: "",
         level: "",
-        enrolledStudents: 0,
+        enrolledstudents: 0,
         description: "",
       })
     } catch (error) {
@@ -207,14 +207,14 @@ export default function CoursesPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="enrolledStudents" className="text-cool-700 dark:text-cool-300">
+                    <Label htmlFor="enrolledstudents" className="text-cool-700 dark:text-cool-300">
                       Enrolled Students
                     </Label>
                     <Input
-                      id="enrolledStudents"
-                      name="enrolledStudents"
+                      id="enrolledstudents"
+                      name="enrolledstudents"
                       type="number"
-                      value={newCourse.enrolledStudents}
+                      value={newCourse.enrolledstudents}
                       onChange={handleInputChange}
                       className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
                       required
@@ -254,6 +254,7 @@ export default function CoursesPage() {
         <div className="mb-4">
           <Input placeholder="Search courses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
+
 
         {/* Edit Dilog */}
         <Dialog open={isEditCourseOpen} onOpenChange={setIsEditCourseOpen}>
@@ -325,14 +326,14 @@ export default function CoursesPage() {
                      </Select>
                    </div>
                    <div className="space-y-2">
-                     <Label htmlFor="enrolledStudents" className="text-cool-700 dark:text-cool-300">
+                     <Label htmlFor="enrolledstudents" className="text-cool-700 dark:text-cool-300">
                        Enrolled Students
                      </Label>
                      <Input
-                       id="enrolledStudents"
-                       name="enrolledStudents"
+                       id="enrolledstudents"
+                       name="enrolledstudents"
                        type="number"
-                       value={editCourse.enrolledStudents}
+                       value={editCourse.enrolledstudents}
                        onChange={handleInputChange}
                        className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
                        required
@@ -368,7 +369,10 @@ export default function CoursesPage() {
                  )}
           </DialogContent>
         </Dialog>
-              
+
+
+
+       {/*this is all the view card in the UI */}       
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredCourses.map((course) => (
@@ -389,8 +393,19 @@ export default function CoursesPage() {
                   </div>
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2" />
-                    <span>{course.enrolledStudents} students</span>
+                    <span>{course.enrolledstudents} students</span>
                   </div>
+                  <div className="flex items-center">
+                   <div
+                     className={`w-4 h-4 mr-2 rounded-full ${
+                       course.level === "Basic" ? "bg-green-500" :
+                       course.level === "Intermediate" ? "bg-yellow-500" :
+                          course.level === "Advanced" ? "bg-red-500" : "bg-gray-400"
+                           }`}
+                    ></div>
+                     <span>{course.level}</span>
+                  </div>
+
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between items-center">
