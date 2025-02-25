@@ -8,13 +8,14 @@ import { UserMinus, Edit } from "lucide-react";
 
 // Define the props for the TeamDetail component
 interface TeamDetailProps {
-  team: { id: number; name: string; leader: string; teammembers: string[]; project: string[] };
+  team: { id: number; name: string; leader: string; teammembers: string[]; project: string };
   onClose: () => void;
-  onUpdate: (updatedTeam: { id: number; name: string; leader: string; teammembers: string[]; project: string[] }) => void;
+  onUpdate: (updatedTeam: { id: number; name: string; leader: string; teammembers: string[]; project: string }) => void;
   allMembers: string[];
+  allProjects: string[];
 }
 
-export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailProps) {
+export function TeamDetail({ team, onClose, onUpdate, allMembers, allProjects }: TeamDetailProps) {
   const [editMode, setEditMode] = useState(false);
   const [editedTeam, setEditedTeam] = useState(team);
 
@@ -26,8 +27,8 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
 
   // Update the team when the form is submitted
   const handleUpdate = () => {
-    if (!editedTeam.name || !editedTeam.leader || editedTeam.teammembers.length === 0) {
-      alert("Please ensure the team has a valid name, leader, and at least one member.");
+    if (!editedTeam.name || !editedTeam.leader || editedTeam.teammembers.length === 0 || !editedTeam.project) {
+      alert("Please ensure the team has a valid name, leader, at least one member, and a project.");
       return;
     }
     onUpdate(editedTeam);
@@ -39,7 +40,7 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
     if (!editedTeam.teammembers.includes(member)) {
       setEditedTeam((prev) => ({
         ...prev,
-        members: [...prev.teammembers, member],
+        teammembers: [...prev.teammembers, member],
       }));
     }
   };
@@ -48,7 +49,7 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
   const handleRemoveMember = (member: string) => {
     setEditedTeam((prev) => ({
       ...prev,
-      members: prev.teammembers.filter((m) => m !== member),
+      teammembers: prev.teammembers.filter((m) => m !== member),
     }));
   };
 
@@ -78,6 +79,7 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
                 placeholder="Enter team name"
               />
             </div>
+
             {/* Team Leader */}
             <div>
               <Label htmlFor="leader">Team Leader</Label>
@@ -98,6 +100,7 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
                 </SelectContent>
               </Select>
             </div>
+
             {/* Team Members */}
             <div>
               <Label>Team Members</Label>
@@ -117,6 +120,7 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
                 ))}
               </ul>
             </div>
+
             {/* Add Member */}
             <div>
               <Label>Add Member</Label>
@@ -135,6 +139,28 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Project */}
+            <div>
+              <Label>Project</Label>
+              <Select
+                name="project"
+                value={editedTeam.project}
+                onValueChange={(value) => handleInputChange({ target: { name: "project", value } } as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={editedTeam.project || "Select project"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {allProjects.map((project) => (
+                    <SelectItem key={project} value={project}>
+                      {project}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Save Changes */}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
@@ -153,28 +179,15 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers }: TeamDetailPr
               <strong>Team Leader:</strong> {team.leader}
             </div>
             <div>
-            <strong>Team Members:</strong>
-<ul className="mt-2 list-disc list-inside">
-  {Array.isArray(team.teammembers) && team.teammembers.length > 0 ? (
-    team.teammembers.map((member, index) => (
-      <li key={index}>{member}</li> // Use 'index' or a unique property from 'member' as the key
-    ))
-  ) : (
-    <li>No members available</li>
-  )}
-</ul>
+              <strong>Team Members:</strong>
+              <ul className="mt-2 list-disc list-inside">
+                {team.teammembers.map((member, index) => (
+                  <li key={index}>{member}</li>
+                ))}
+              </ul>
             </div>
             <div>
-              <strong>Projects:</strong>
-              <ul className="mt-2 list-disc list-inside">
-  {Array.isArray(team.project) && team.project.length > 0 ? (
-    team.project.map((project, index) => (
-      <li key={index}>{project}</li>
-    ))
-  ) : (
-    <li>No projects available</li>
-  )}
-</ul>
+              <strong>Project:</strong> {team.project}
             </div>
             <div className="flex justify-end">
               <Button onClick={() => setEditMode(true)}>

@@ -1,3 +1,4 @@
+// app/communication/page.tsx
 import { MainLayout } from "@/components/layout/main-layout"
 import { InternalChat } from "@/components/communication/internal-chat"
 import { AnnouncementsFeed } from "@/components/communication/announcements-feed"
@@ -15,4 +16,3 @@ export default function CommunicationPage() {
     </MainLayout>
   )
 }
-

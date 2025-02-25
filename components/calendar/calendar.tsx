@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronLeft, ChevronRight, Plus, Trash } from "lucide-react"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -18,52 +18,69 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/components/auth/auth-context"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus } from "lucide-react"
 
-const eventCategories = [
-  { id: "meetings", label: "Meetings", color: "bg-blue-500" },
-  { id: "deadlines", label: "Deadlines", color: "bg-red-500" },
-  { id: "reminders", label: "Reminders", color: "bg-yellow-500" },
+interface Event {
+  id: number
+  title: string
+  startdate: Date
+  enddate: Date
+  time: string | null
+  category: string
+  description: string
+}
+
+interface EventCategory {
+  id: string
+  label: string
+  color: string
+}
+
+// Adjusted categories to match database
+const eventCategories: EventCategory[] = [
+  { id: "meeting", label: "Meetings", color: "bg-blue-500" },
+  { id: "deadline", label: "Deadlines", color: "bg-red-500" },
+  { id: "reminder", label: "Reminders", color: "bg-yellow-500" },
 ]
 
 export function Calendar() {
-  const [view, setView] = useState("month")
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedEvent, setSelectedEvent] = useState(null)
-  const [newEvent, setNewEvent] = useState({
+  const [view, setView] = useState<string>("month")
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [newEvent, setNewEvent] = useState<Event>({
+    id: 0,
     title: "",
-    start: new Date(),
-    end: new Date(),
+    startdate: new Date(),
+    enddate: new Date(),
+    time: null,
     category: "",
     description: "",
   })
-  const [selectedCategories, setSelectedCategories] = useState(eventCategories.map((cat) => cat.id))
-  const [events, setEvents] = useState([
-    {
-      id: 1,
-      title: "Team Meeting",
-      start: new Date(2024, 2, 15, 10, 0),
-      end: new Date(2024, 2, 15, 11, 0),
-      category: "meetings",
-    },
-    {
-      id: 2,
-      title: "Project Deadline",
-      start: new Date(2024, 2, 20),
-      end: new Date(2024, 2, 20),
-      category: "deadlines",
-    },
-    {
-      id: 3,
-      title: "Follow-up Call",
-      start: new Date(2024, 2, 18, 14, 0),
-      end: new Date(2024, 2, 18, 15, 0),
-      category: "reminders",
-    },
-  ])
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(eventCategories.map((cat) => cat.id))
+  const [events, setEvents] = useState<Event[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
+  const [errorMessage, setErrorMessage] = useState<string>("")
 
   const { hasPermission } = useAuth()
+
+  useEffect(() => {
+    fetchEvents()
+  }, [])
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/events/")
+      const data: Event[] = await response.json()
+      // Convert string dates to Date objects for UI
+      const formattedData = data.map(event => ({
+        ...event,
+        startdate: new Date(event.startdate),
+        enddate: new Date(event.enddate),
+      }))
+      setEvents(formattedData)
+    } catch (error) {
+      console.error("Error fetching events:", error)
+    }
+  }
 
   const handlePrevious = () => {
     setCurrentDate((prevDate) => {
@@ -93,21 +110,80 @@ export function Calendar() {
     })
   }
 
-  const handleAddEvent = (e) => {
-    e.preventDefault()
-    const newEventWithId = { ...newEvent, id: events.length + 1 }
-    setEvents([...events, newEventWithId])
-    setNewEvent({ title: "", start: new Date(), end: new Date(), category: "", description: "" })
-    setIsDialogOpen(false)
+  const formatDateToString = (date: Date) => {
+    return date.toISOString().split("T")[0] // Returns YYYY-MM-DD
   }
 
-  const handleEventClick = (event) => {
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage("") // Reset error message
+    try {
+      const eventToSend = {
+        ...newEvent,
+        startdate: formatDateToString(newEvent.startdate),
+        enddate: formatDateToString(newEvent.enddate),
+        time: newEvent.time || null, // Send null if time is empty
+      }
+      const response = await fetch("http://127.0.0.1:8000/api/events/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventToSend),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(JSON.stringify(errorData))
+      }
+      const data: Event = await response.json()
+      setEvents([...events, { ...data, startdate: new Date(data.startdate), enddate: new Date(data.enddate) }])
+      setNewEvent({
+        id: 0,
+        title: "",
+        startdate: new Date(),
+        enddate: new Date(),
+        time: null,
+        category: "",
+        description: "",
+      })
+      setIsDialogOpen(false)
+    } catch (error) {
+      console.error("Error adding event:", error)
+      setErrorMessage(`Failed to add event: ${(error as Error).message}`)
+    }
+  }
+
+  const handleDeleteEvent = async (id: number) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/events/${id}/`, {  // Ensure trailing slash matches backend
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          // Add authentication headers if required by your backend (e.g., Authorization: Bearer <token>)
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to delete event: ${response.status} ${response.statusText}`);
+      }
+  
+      // Only update UI if the delete was successful (e.g., 204 No Content)
+      setEvents(events.filter((event) => event.id !== id));
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      // Optionally, revert UI or show an error message to the user
+      alert("Failed to delete event. Please try again.");
+    }
+  };
+
+  const handleEventClick = (event: Event) => {
     setSelectedEvent(event)
   }
 
-  const handleCategoryToggle = (categoryId) => {
+  const handleCategoryToggle = (categoryId: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
     )
   }
 
@@ -129,7 +205,7 @@ export function Calendar() {
           {Array.from({ length: 42 }, (_, i) => {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i - startingDayOfWeek + 1)
             const isCurrentMonth = date.getMonth() === currentDate.getMonth()
-            const events = filteredEvents.filter((event) => event.start.toDateString() === date.toDateString())
+            const events = filteredEvents.filter((event) => event.startdate.toDateString() === date.toDateString())
             return (
               <div
                 key={i}
@@ -140,7 +216,7 @@ export function Calendar() {
                   <div
                     key={event.id}
                     className={`text-xs p-1 mb-1 rounded cursor-pointer ${
-                      eventCategories.find((cat) => cat.id === event.category).color
+                      eventCategories.find((cat) => cat.id === event.category)?.color || "bg-gray-500"
                     } text-white`}
                     onClick={() => handleEventClick(event)}
                   >
@@ -218,6 +294,7 @@ export function Calendar() {
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleAddEvent} className="space-y-4">
+                    {errorMessage && <div className="text-red-500">{errorMessage}</div>}
                     <div className="space-y-2">
                       <Label htmlFor="title" className="text-cool-700 dark:text-cool-300">
                         Event Title
@@ -237,8 +314,8 @@ export function Calendar() {
                       <Input
                         id="start"
                         type="datetime-local"
-                        value={newEvent.start.toISOString().slice(0, 16)}
-                        onChange={(e) => setNewEvent({ ...newEvent, start: new Date(e.target.value) })}
+                        value={newEvent.startdate.toISOString().slice(0, 16)}
+                        onChange={(e) => setNewEvent({ ...newEvent, startdate: new Date(e.target.value) })}
                         className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
                         required
                       />
@@ -250,10 +327,22 @@ export function Calendar() {
                       <Input
                         id="end"
                         type="datetime-local"
-                        value={newEvent.end.toISOString().slice(0, 16)}
-                        onChange={(e) => setNewEvent({ ...newEvent, end: new Date(e.target.value) })}
+                        value={newEvent.enddate.toISOString().slice(0, 16)}
+                        onChange={(e) => setNewEvent({ ...newEvent, enddate: new Date(e.target.value) })}
                         className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
                         required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="time" className="text-cool-700 dark:text-cool-300">
+                        Time (optional)
+                      </Label>
+                      <Input
+                        id="time"
+                        type="time"
+                        value={newEvent.time || ""}
+                        onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value || null })}
+                        className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
                       />
                     </div>
                     <div className="space-y-2">
@@ -316,13 +405,16 @@ export function Calendar() {
             </DialogHeader>
             <div className="space-y-2">
               <p>
-                <strong>Start:</strong> {selectedEvent.start.toLocaleString()}
+                <strong>Start:</strong> {selectedEvent.startdate.toLocaleString()}
               </p>
               <p>
-                <strong>End:</strong> {selectedEvent.end.toLocaleString()}
+                <strong>End:</strong> {selectedEvent.enddate.toLocaleString()}
               </p>
               <p>
-                <strong>Category:</strong> {eventCategories.find((cat) => cat.id === selectedEvent.category).label}
+                <strong>Time:</strong> {selectedEvent.time || "N/A"}
+              </p>
+              <p>
+                <strong>Category:</strong> {eventCategories.find((cat) => cat.id === selectedEvent.category)?.label}
               </p>
               <p>
                 <strong>Description:</strong> {selectedEvent.description}
@@ -332,7 +424,11 @@ export function Calendar() {
               <Button variant="outline" onClick={() => setSelectedEvent(null)}>
                 Close
               </Button>
-              {hasPermission("edit_event") && <Button>Edit</Button>}
+              {hasPermission("delete_event") && (
+                <Button variant="destructive" onClick={() => handleDeleteEvent(selectedEvent.id)}>
+                  <Trash className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -340,4 +436,3 @@ export function Calendar() {
     </div>
   )
 }
-

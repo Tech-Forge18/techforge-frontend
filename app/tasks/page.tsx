@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Pencil, Trash2, Eye, MessageSquare, Plus } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
+import { Pencil, Trash2, Eye } from "lucide-react"
 import { useAuth } from "@/components/auth/auth-context"
 import {
   Dialog,
@@ -18,9 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material"
+import { TaskDetail } from "@/components/task-detail"
 
 interface Task {
   id: number
@@ -28,10 +27,9 @@ interface Task {
   description: string
   duedate: string
   status: string
-  assignedto: string
+  assignedto: string // Team name
   priority: string
-  comment: string
-  progress: number
+  
 }
 
 interface TeamMember {
@@ -44,8 +42,8 @@ export default function TasksPage() {
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
-    assignedTo: "",
-    dueDate: "",
+    assignedto: "",
+    duedate: "",
     priority: "",
     status: "Pending",
   })
@@ -98,11 +96,11 @@ export default function TasksPage() {
     const taskData = {
       title: newTask.title,
       description: newTask.description,
-      duedate: newTask.dueDate,
+      duedate: newTask.duedate,
       status: newTask.status,
-      assignedto: newTask.assignedTo, // Ensure this matches the ID of the assigned member
+      assignedto: newTask.assignedto, // Team name
       priority: newTask.priority,
-      comment: "No comment", // Default comment as per the model
+      
     }
 
     try {
@@ -128,10 +126,10 @@ export default function TasksPage() {
       setNewTask({
         title: "",
         description: "",
-        assignedTo: "",
-        dueDate: "",
+        assignedto: "",
+        duedate: "",
         priority: "",
-        status: "Pending",
+        status: "",
       })
 
       // Refresh the task list
@@ -184,20 +182,20 @@ export default function TasksPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="assignedTo" className="text-cool-700 dark:text-cool-300">
+            <Label htmlFor="assignedto" className="text-cool-700 dark:text-cool-300">
               Assigned To
             </Label>
             <Select
-              name="assignedTo"
-              value={newTask.assignedTo}
-              onValueChange={(value) => setNewTask({ ...newTask, assignedTo: value })}
+              name="assignedto"
+              value={newTask.assignedto}
+              onValueChange={(value) => setNewTask({ ...newTask, assignedto: value })}
             >
               <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
                 <SelectValue placeholder="Select team member" />
               </SelectTrigger>
               <SelectContent>
                 {teamMembers.map((member) => (
-                  <SelectItem key={member.id} value={member.id.toString()}>
+                  <SelectItem key={member.id} value={member.name}>
                     {member.name}
                   </SelectItem>
                 ))}
@@ -205,18 +203,37 @@ export default function TasksPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="dueDate" className="text-cool-700 dark:text-cool-300">
+            <Label htmlFor="duedate" className="text-cool-700 dark:text-cool-300">
               Due Date
             </Label>
             <Input
-              id="dueDate"
-              name="dueDate"
+              id="duedate"
+              name="duedate"
               type="date"
-              value={newTask.dueDate}
+              value={newTask.duedate}
               onChange={handleInputChange}
               className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600"
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="status" className="text-cool-700 dark:text-cool-300">
+              Status
+            </Label>
+            <Select
+              name="status"
+              value={newTask.status}
+              onValueChange={(value) => setNewTask({ ...newTask, status: value })}
+            >
+              <SelectTrigger className="bg-cool-50 dark:bg-cool-700 border-cool-200 dark:border-cool-600">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="In Progress">In Progress</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="priority" className="text-cool-700 dark:text-cool-300">
@@ -273,7 +290,6 @@ export default function TasksPage() {
                   <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Due Date</TableCell>
                   <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Priority</TableCell>
                   <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Status</TableCell>
-                  <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Progress</TableCell>
                   <TableCell className="font-semibold text-cool-700 dark:text-cool-300">Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -281,9 +297,7 @@ export default function TasksPage() {
                 {tasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell className="text-cool-800 dark:text-cool-200">{task.title}</TableCell>
-                    <TableCell className="text-cool-800 dark:text-cool-200">
-                      {teamMembers.find((member) => member.id === parseInt(task.assignedto))?.name || "Unassigned"}
-                    </TableCell>
+                    <TableCell className="text-cool-800 dark:text-cool-200">{task.assignedto}</TableCell>
                     <TableCell className="text-cool-800 dark:text-cool-200">{task.duedate}</TableCell>
                     <TableCell>
                       <span
@@ -312,25 +326,9 @@ export default function TasksPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Progress value={task.progress} className="w-[60px]" />
-                    </TableCell>
-                    <TableCell>
                       <div className="flex gap-2">
                         <Button variant="ghost" size="icon" title="View Task" onClick={() => setSelectedTask(task)}>
                           <Eye className="h-4 w-4" />
-                        </Button>
-                        {hasPermission("edit_task") && (
-                          <Button variant="ghost" size="icon" title="Edit Task">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {hasPermission("delete_task") && (
-                          <Button variant="ghost" size="icon" title="Delete Task">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" title="View Comments">
-                          <MessageSquare className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -341,6 +339,11 @@ export default function TasksPage() {
           </TableContainer>
         </CardContent>
       </Card>
+
+      {/* Task Details Dialog */}
+      {selectedTask && (
+        <TaskDetail taskId={selectedTask.id} onClose={() => setSelectedTask(null)} />
+      )}
     </PageLayout>
   )
 }

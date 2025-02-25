@@ -8,32 +8,83 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
+// Define interface matching the model (excluding file since it's handled separately)
+interface SupportTicket {
+  title: string
+  category: string
+  priority: string
+  description: string
+  contactinfo: number // Changed to number to match IntegerField
+}
+
 export function TicketSubmissionForm() {
-  const [ticket, setTicket] = useState({
+  const [ticket, setTicket] = useState<SupportTicket>({
     title: "",
     category: "",
     priority: "",
     description: "",
-    contactInfo: "",
+    contactinfo: 0, // Initialize as number
   })
+  const [file, setFile] = useState<File | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<boolean>(false)
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setTicket((prev) => ({ ...prev, [name]: value }))
+    // Convert contactinfo to number
+    const newValue = name === "contactinfo" ? Number(value) : value
+    setTicket((prev) => ({ ...prev, [name]: newValue }))
   }
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0] || null
+    setFile(selectedFile)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the ticket to your backend
-    console.log("Submitted ticket:", ticket)
-    // Reset form after submission
-    setTicket({
-      title: "",
-      category: "",
-      priority: "",
-      description: "",
-      contactInfo: "",
-    })
+    setError(null)
+    setSuccess(false)
+
+    const formData = new FormData()
+    formData.append("title", ticket.title)
+    formData.append("category", ticket.category)
+    formData.append("priority", ticket.priority)
+    formData.append("description", ticket.description)
+    formData.append("contactinfo", ticket.contactinfo.toString()) // Convert number to string for FormData
+    if (file) {
+      formData.append("file", file)
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/supports/", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Failed to submit ticket")
+      }
+
+      console.log("Ticket submitted successfully:", await response.json())
+      setSuccess(true)
+      
+      // Reset form properly
+      setTicket({
+        title: "",
+        category: "",
+        priority: "",
+        description: "",
+        contactinfo: 0,
+      })
+      setFile(null)
+      // Reset file input element
+      const fileInput = document.getElementById("file") as HTMLInputElement
+      if (fileInput) fileInput.value = ""
+    } catch (err) {
+      console.error("Error submitting ticket:", err)
+    }
   }
 
   return (
@@ -43,6 +94,8 @@ export function TicketSubmissionForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <div className="text-red-500">{error}</div>}
+          {success && <div className="text-green-500">Ticket submitted successfully!</div>}
           <div>
             <Label htmlFor="title">Ticket Title</Label>
             <Input
@@ -56,7 +109,11 @@ export function TicketSubmissionForm() {
           </div>
           <div>
             <Label htmlFor="category">Category</Label>
-            <Select name="category" onValueChange={(value) => setTicket((prev) => ({ ...prev, category: value }))}>
+            <Select 
+              name="category" 
+              value={ticket.category}
+              onValueChange={(value) => setTicket((prev) => ({ ...prev, category: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -69,7 +126,11 @@ export function TicketSubmissionForm() {
           </div>
           <div>
             <Label htmlFor="priority">Priority Level</Label>
-            <Select name="priority" onValueChange={(value) => setTicket((prev) => ({ ...prev, priority: value }))}>
+            <Select 
+              name="priority" 
+              value={ticket.priority}
+              onValueChange={(value) => setTicket((prev) => ({ ...prev, priority: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select priority" />
               </SelectTrigger>
@@ -93,19 +154,25 @@ export function TicketSubmissionForm() {
             />
           </div>
           <div>
-            <Label htmlFor="contactInfo">Contact Information</Label>
+            <Label htmlFor="contactinfo">Contact Information</Label>
             <Input
-              id="contactInfo"
-              name="contactInfo"
-              value={ticket.contactInfo}
+              id="contactinfo"
+              name="contactinfo"
+              type="number"
+              value={ticket.contactinfo === 0 ? "" : ticket.contactinfo} // Show empty string instead of 0
               onChange={handleInputChange}
-              placeholder="Enter your email or phone number"
+              placeholder="Enter your phone number"
               required
             />
           </div>
           <div>
-            <Label htmlFor="attachments">Attach Files</Label>
-            <Input id="attachments" type="file" multiple />
+            <Label htmlFor="file">Attach File</Label>
+            <Input
+              id="file"
+              name="file"
+              type="file"
+              onChange={handleFileChange}
+            />
           </div>
           <Button type="submit">Submit Ticket</Button>
         </form>
@@ -113,4 +180,3 @@ export function TicketSubmissionForm() {
     </Card>
   )
 }
-

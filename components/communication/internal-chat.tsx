@@ -1,15 +1,13 @@
 "use client"
-
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { io, Socket } from "socket.io-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-// Dummy data for chat messages
+// Dummy data for initial chat messages
 const initialMessages = [
   { id: 1, sender: "John Doe", content: "Hey team, how's the project coming along?", timestamp: "10:30 AM" },
   {
@@ -29,16 +27,43 @@ const initialMessages = [
 export function InternalChat() {
   const [messages, setMessages] = useState(initialMessages)
   const [newMessage, setNewMessage] = useState("")
+  const [socket, setSocket] = useState<Socket | null>(null) // Explicitly define the type
+
+  useEffect(() => {
+    const newSocket = io("ws://localhost:8000/ws/chat/general/") // Replace 'general' with your room name
+    setSocket(newSocket)
+
+    // Listen for incoming messages
+    newSocket.on("message", (data) => {
+      const message = {
+        id: messages.length + 1,
+        sender: data.sender || "Unknown",
+        content: data.message,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      }
+      setMessages((prevMessages) => [...prevMessages, message])
+    })
+
+    // Cleanup WebSocket connection on unmount
+    return () => {
+      newSocket.disconnect()
+    }
+  }, [messages])
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault()
-    if (newMessage.trim()) {
+    if (newMessage.trim() && socket) {
       const message = {
         id: messages.length + 1,
         sender: "You",
         content: newMessage,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }
+
+      // Send message via WebSocket
+      socket.emit("message", { message: newMessage })
+
+      // Update local state
       setMessages([...messages, message])
       setNewMessage("")
     }
@@ -82,4 +107,3 @@ export function InternalChat() {
     </Card>
   )
 }
-

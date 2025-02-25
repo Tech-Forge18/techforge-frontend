@@ -5,13 +5,15 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Link } from "lucide-react"
+import { Textarea } from "./ui/textarea"
 
 interface ClientDetailProps {
   client: {
     id: number
     name: string
     project: string
-    contactInfo: string
+    contactinfo: string
+    email: string
     status: string
   }
   onClose: () => void
@@ -23,7 +25,7 @@ export function ClientDetail({ client, onClose, onUpdate, projects }: ClientDeta
   const [editMode, setEditMode] = useState(false)
   const [editedClient, setEditedClient] = useState(client)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setEditedClient((prev) => ({ ...prev, [name]: value }))
   }
@@ -55,7 +57,8 @@ export function ClientDetail({ client, onClose, onUpdate, projects }: ClientDeta
               <Label htmlFor="project">Project</Label>
               <Select
                 name="project"
-                onValueChange={(value) => handleInputChange({ target: { name: "project", value } } as any)}
+                value={editedClient.project}
+                onValueChange={(value) => setEditedClient({ ...editedClient, project: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={editedClient.project} />
@@ -70,19 +73,22 @@ export function ClientDetail({ client, onClose, onUpdate, projects }: ClientDeta
               </Select>
             </div>
             <div>
-              <Label htmlFor="contactInfo">Contact Info</Label>
-              <Input
-                id="contactInfo"
-                name="contactInfo"
-                value={editedClient.contactInfo}
+              <Label htmlFor="contactinfo">Contact Info</Label>
+              <Textarea
+                id="contactinfo"
+                name="contactinfo"
+                value={editedClient.contactinfo}
                 onChange={handleInputChange}
               />
             </div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" value={editedClient.email} onChange={handleInputChange} />
             <div>
               <Label htmlFor="status">Status</Label>
               <Select
                 name="status"
-                onValueChange={(value) => handleInputChange({ target: { name: "status", value } } as any)}
+                value={editedClient.status}
+                onValueChange={(value) => setEditedClient({ ...editedClient, status: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={editedClient.status} />
@@ -110,7 +116,9 @@ export function ClientDetail({ client, onClose, onUpdate, projects }: ClientDeta
               <strong>Project:</strong> {client.project}
             </div>
             <div>
-              <strong>Contact Info:</strong> {client.contactInfo}
+              <strong>Contact Info:</strong> {client.contactinfo}
+            </div>
+            <div><strong>Email:</strong> {client.email}
             </div>
             <div>
               <strong>Status:</strong> {client.status}
@@ -128,4 +136,3 @@ export function ClientDetail({ client, onClose, onUpdate, projects }: ClientDeta
     </Dialog>
   )
 }
-

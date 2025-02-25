@@ -18,7 +18,7 @@ interface Team {
   name: string;
   leader: string;
   teammembers: string[]; // Array of member names (strings)
-  project: string[]; // Array of project names (strings)
+  project: string; // Single project name (string)
 }
 
 interface Project {
@@ -38,8 +38,8 @@ export default function TeamsPage() {
     id: Date.now(),
     name: "",
     leader: "",
-    members: [] as string[], // Array of member names (strings)
-    project: [] as string[], // Array of project names (strings)
+    teammembers: [] as string[], // Array of member names (strings)
+    project: "", // Single project name (string)
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [teams, setTeams] = useState<Team[]>([]);
@@ -75,22 +75,13 @@ export default function TeamsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Debug: Log the newTeam state before sending
-    console.log("Data being sent to the backend:", newTeam);
-
     try {
-      // Map names to IDs
-      const teammember_ids = newTeam.members.map((memberName) =>
-        allMembers.find((member) => member.name === memberName)?.id
-      );
-      const project_id = allProjects.find((project) => project.name === newTeam.project[0])?.id;
-
       // Prepare the payload
       const payload = {
         name: newTeam.name,
-        leader: newTeam.leader, // Send leader name
-        teammember_ids, // Send member IDs
-        project_id, // Send project ID
+        leader: newTeam.leader,
+        teammembers: newTeam.teammembers, // Array of member names
+        project: newTeam.project, // Single project name
       };
 
       // Debug: Log the payload
@@ -98,9 +89,6 @@ export default function TeamsPage() {
 
       // Send the POST request
       const response = await axios.post<Team>("http://127.0.0.1:8000/api/teams/", payload);
-
-      // Debug: Log the response from the backend
-      console.log("Response from the backend:", response.data);
 
       // Update the teams state with the new team
       setTeams([...teams, response.data]);
@@ -111,8 +99,8 @@ export default function TeamsPage() {
         id: Date.now(),
         name: "",
         leader: "",
-        members: [],
-        project: [],
+        teammembers: [],
+        project: "",
       });
 
       alert("Team created successfully!");
@@ -196,10 +184,10 @@ export default function TeamsPage() {
 
                 {/* Team Members */}
                 <div className="grid gap-2">
-                  <Label htmlFor="members">Team Members</Label>
+                  <Label htmlFor="teammembers">Team Members</Label>
                   <Select
                     onValueChange={(value) =>
-                      setNewTeam({ ...newTeam, members: [...newTeam.members, value] })
+                      setNewTeam({ ...newTeam, teammembers: [...newTeam.teammembers, value] })
                     }
                   >
                     <SelectTrigger>
@@ -207,7 +195,7 @@ export default function TeamsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {allMembers
-                        .filter((member) => !newTeam.members.includes(member.name))
+                        .filter((member) => !newTeam.teammembers.includes(member.name))
                         .map((member) => (
                           <SelectItem key={member.id} value={member.name}>
                             {member.name}
@@ -216,7 +204,7 @@ export default function TeamsPage() {
                     </SelectContent>
                   </Select>
                   <div className="flex flex-wrap gap-2">
-                    {newTeam.members.map((member) => (
+                    {newTeam.teammembers.map((member) => (
                       <Button
                         key={member}
                         variant="outline"
@@ -224,7 +212,7 @@ export default function TeamsPage() {
                         onClick={() =>
                           setNewTeam({
                             ...newTeam,
-                            members: newTeam.members.filter((m) => m !== member),
+                            teammembers: newTeam.teammembers.filter((m) => m !== member),
                           })
                         }
                       >
@@ -236,42 +224,21 @@ export default function TeamsPage() {
 
                 {/* Projects */}
                 <div className="grid gap-2">
-                  <Label htmlFor="projects">Projects</Label>
+                  <Label htmlFor="project">Project</Label>
                   <Select
-                    onValueChange={(value) =>
-                      setNewTeam({ ...newTeam, project: [...newTeam.project, value] })
-                    }
+                    onValueChange={(value) => setNewTeam({ ...newTeam, project: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select projects" />
+                      <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allProjects
-                        .filter((project) => !newTeam.project.includes(project.name))
-                        .map((project) => (
-                          <SelectItem key={project.id} value={project.name}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
+                      {allProjects.map((project) => (
+                        <SelectItem key={project.id} value={project.name}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex flex-wrap gap-2">
-                    {newTeam.project.map((project) => (
-                      <Button
-                        key={project}
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setNewTeam({
-                            ...newTeam,
-                            project: newTeam.project.filter((p) => p !== project),
-                          })
-                        }
-                      >
-                        {project} <span className="ml-2">×</span>
-                      </Button>
-                    ))}
-                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 mt-4">
@@ -302,7 +269,7 @@ export default function TeamsPage() {
               <TableCell>Team Name</TableCell>
               <TableCell>Team Leader</TableCell>
               <TableCell>Members</TableCell>
-              <TableCell>Projects</TableCell>
+              <TableCell>Project</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -311,13 +278,8 @@ export default function TeamsPage() {
               <TableRow key={team.id}>
                 <TableCell>{team.name}</TableCell>
                 <TableCell>{team.leader}</TableCell>
-                <TableCell>
-                  {team.teammembers}
-               </TableCell>
-              <TableCell>
-                {team.project}
-                </TableCell>
-
+                <TableCell>{team.teammembers.join(", ")}</TableCell>
+                <TableCell>{team.project}</TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
@@ -349,20 +311,14 @@ export default function TeamsPage() {
 
       {/* Team Details Dialog */}
       {selectedTeam && (
-        <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Team Details</DialogTitle>
-            </DialogHeader>
-            <TeamDetail
-              team={selectedTeam}
-              onUpdate={handleUpdateTeam}
-              onClose={() => setSelectedTeam(null)}
-              allMembers={allMembers.map((member) => member.name)} // Pass only member names
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+  <TeamDetail
+    team={selectedTeam}
+    onClose={() => setSelectedTeam(null)}
+    onUpdate={handleUpdateTeam}
+    allMembers={allMembers.map((member) => member.name)} // Pass member names
+    allProjects={allProjects.map((project) => project.name)} // Pass project names
+  />
+)}
     </PageLayout>
   );
 }
