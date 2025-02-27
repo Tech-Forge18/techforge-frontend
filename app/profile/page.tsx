@@ -2,7 +2,7 @@ import React from 'react';
 import { MainLayout } from '@/components/layout/main-layout';
 import UserMetaCard from '@/components/profile/UserMetaCard';
 import UserInfoCard from '@/components/profile/UserInfoCard';
-import UserAddressCard from '@/components/profile/UserAddressCard';
+
 
 function index() {
   return (
@@ -14,7 +14,7 @@ function index() {
         <div className="space-y-6">
           <UserMetaCard />
           <UserInfoCard />
-          <UserAddressCard />
+          
         </div>
       </div>
     </MainLayout>
