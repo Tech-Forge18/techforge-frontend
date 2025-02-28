@@ -27,47 +27,7 @@ const initialMessages = [
 export function InternalChat() {
   const [messages, setMessages] = useState(initialMessages)
   const [newMessage, setNewMessage] = useState("")
-  const [socket, setSocket] = useState<Socket | null>(null) // Explicitly define the type
 
-  useEffect(() => {
-    const newSocket = io("ws://localhost:8000/ws/chat/general/") // Replace 'general' with your room name
-    setSocket(newSocket)
-
-    // Listen for incoming messages
-    newSocket.on("message", (data) => {
-      const message = {
-        id: messages.length + 1,
-        sender: data.sender || "Unknown",
-        content: data.message,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      }
-      setMessages((prevMessages) => [...prevMessages, message])
-    })
-
-    // Cleanup WebSocket connection on unmount
-    return () => {
-      newSocket.disconnect()
-    }
-  }, [messages])
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newMessage.trim() && socket) {
-      const message = {
-        id: messages.length + 1,
-        sender: "You",
-        content: newMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      }
-
-      // Send message via WebSocket
-      socket.emit("message", { message: newMessage })
-
-      // Update local state
-      setMessages([...messages, message])
-      setNewMessage("")
-    }
-  }
 
   return (
     <Card className="h-[600px] flex flex-col">
@@ -94,7 +54,7 @@ export function InternalChat() {
             ))}
           </div>
         </ScrollArea>
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
+        <form onSubmit={(e) => e.preventDefault()} className="flex space-x-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}

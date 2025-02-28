@@ -58,7 +58,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between px-4 py-4 border-b border-indigo-200 dark:border-indigo-800">
             <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              IT Dashboard
+               Tech Forge 
             </h2>
             <Button
               variant="ghost"
@@ -97,7 +97,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               <Menu className="h-6 w-6" />
             </Button>
             <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hidden sm:block">
-              IT Dashboard
+              Dashboard
             </h2>
           </div>
           <div className="flex items-center gap-3">

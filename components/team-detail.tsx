@@ -2,9 +2,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { UserMinus, Edit } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { UserMinus } from "lucide-react";
 
 // Define the props for the TeamDetail component
 interface TeamDetailProps {
@@ -55,147 +66,49 @@ export function TeamDetail({ team, onClose, onUpdate, allMembers, allProjects }:
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md w-[90vw] rounded-xl bg-white dark:bg-gray-900 shadow-xl p-6">
         <DialogHeader>
-          <DialogTitle>{editMode ? "Edit Team" : "Team Details"}</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-indigo-600 dark:text-indigo-400">
+            Team Details
+          </DialogTitle>
         </DialogHeader>
-        {/* Edit Mode */}
-        {editMode ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleUpdate();
-            }}
-            className="space-y-4"
-          >
-            {/* Team Name */}
-            <div>
-              <Label htmlFor="name">Team Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={editedTeam.name}
-                onChange={handleInputChange}
-                placeholder="Enter team name"
-              />
-            </div>
-
-            {/* Team Leader */}
-            <div>
-              <Label htmlFor="leader">Team Leader</Label>
-              <Select
-                name="leader"
-                value={editedTeam.leader}
-                onValueChange={(value) => handleInputChange({ target: { name: "leader", value } } as any)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={editedTeam.leader || "Select leader"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {allMembers.map((member) => (
-                    <SelectItem key={member} value={member}>
-                      {member}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Team Members */}
-            <div>
-              <Label>Team Members</Label>
-              <ul className="mt-2 space-y-2">
-                {editedTeam.teammembers.map((member) => (
-                  <li key={member} className="flex items-center justify-between">
-                    <span>{member}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveMember(member)}
-                    >
-                      <UserMinus className="h-4 w-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Add Member */}
-            <div>
-              <Label>Add Member</Label>
-              <Select onValueChange={(value) => handleAddMember(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select member to add" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allMembers
-                    .filter((member) => !editedTeam.teammembers.includes(member))
-                    .map((member) => (
-                      <SelectItem key={member} value={member}>
-                        {member}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Project */}
-            <div>
-              <Label>Project</Label>
-              <Select
-                name="project"
-                value={editedTeam.project}
-                onValueChange={(value) => handleInputChange({ target: { name: "project", value } } as any)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={editedTeam.project || "Select project"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {allProjects.map((project) => (
-                    <SelectItem key={project} value={project}>
-                      {project}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Save Changes */}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditMode(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save Changes</Button>
-            </div>
-          </form>
-        ) : (
-          // View Mode
-          <div className="space-y-4">
-            <div>
-              <strong>Team Name:</strong> {team.name}
-            </div>
-            <div>
-              <strong>Team Leader:</strong> {team.leader}
-            </div>
-            <div>
-              <strong>Team Members:</strong>
-              <ul className="mt-2 list-disc list-inside">
-                {team.teammembers.map((member, index) => (
-                  <li key={index}>{member}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <strong>Project:</strong> {team.project}
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={() => setEditMode(true)}>
-                <Edit className="mr-2 h-4 w-4" /> Edit Team
-              </Button>
+        {/* View Mode */}
+        <div className="space-y-4">
+          <div className="flex flex-col">
+            <strong className="text-gray-700 dark:text-gray-300">Team Name:</strong>
+            <span className="text-gray-800 dark:text-gray-200 mt-1">{team.name}</span>
+          </div>
+          <div className="flex flex-col">
+            <strong className="text-gray-700 dark:text-gray-300">Team Leader:</strong>
+            <span className="text-gray-800 dark:text-gray-200 mt-1">{team.leader}</span>
+          </div>
+          <div className="flex flex-col">
+            <strong className="text-gray-700 dark:text-gray-300">Team Members:</strong>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {team.teammembers.map((member, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-sm"
+                >
+                  {member}
+                </span>
+              ))}
             </div>
           </div>
-        )}
+          <div className="flex flex-col">
+            <strong className="text-gray-700 dark:text-gray-300">Project:</strong>
+            <span className="text-gray-800 dark:text-gray-200 mt-1">{team.project}</span>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="border-indigo-300 dark:border-indigo-600 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
