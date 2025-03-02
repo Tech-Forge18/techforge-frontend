@@ -39,7 +39,7 @@ interface Member {
 }
 
 // API base URL
-const apiBaseUrl = "http://127.0.0.1:8000/api/members/";
+const apiBaseUrl = "https://techforge-backend.onrender.com/api";
 
 export default function MembersPage() {
   const { t } = useTranslation();

@@ -56,7 +56,7 @@ interface Project {
   description: string;
 }
 
-const API_URL = "http://127.0.0.1:8000/api/projects/";
+const API_URL = "https://techforge-backend.onrender.com/api";
 
 export default function ProjectsPage() {
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
