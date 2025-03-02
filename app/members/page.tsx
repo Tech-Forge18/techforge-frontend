@@ -94,12 +94,11 @@ export default function MembersPage() {
   }, []);
 
   // Filter and paginate members
-  const filteredMembers = members.filter(
-    (member) =>
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredMembers = members.filter((member) =>
+    (member.name || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+    (member.role || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+    (member.department || "").toLowerCase().includes((searchTerm || "").toLowerCase()) ||
+    (member.email || "").toLowerCase().includes((searchTerm || "").toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
